@@ -1,0 +1,23 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "aviatordave@gmail.com",
+    "enableMultiJS": true,
+    "longName": "Simple Analog",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "3",
+    "shortName": "Simple Analog",
+    "targetPlatforms": [
+        "basalt"
+    ],
+    "uuid": "501e40b1-9b6a-4dcd-a678-4c74b53a6e91",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
