@@ -5,6 +5,7 @@
 
 #define HAND_MARGIN  10
 #define FINAL_RADIUS 65
+#define MIN_HAND_GREATER_LENGTH 10
 
 #define ANIMATION_DURATION 500
 #define ANIMATION_DELAY    600
@@ -70,8 +71,21 @@ static int hours_to_minutes(int hours_out_of_12) {
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
-  // Color background?
-  GRect bounds = layer_get_bounds(layer);
+  
+  
+
+  int outside_buffer = 5; //Distance between reference and edge
+  int degrees_between = 30; //Degrees between reference on the outside of the watch
+  int current_degrees; //Degrees that is currently being drawn
+ 
+    
+  GRect bounds = layer_get_bounds(layer);  
+  GRect outside_circle = GRect(outside_buffer,outside_buffer, bounds.size.w - outside_buffer*2, bounds.size.h - outside_buffer*2);
+  
+  
+  //GRect outside_circle = GRect(20,20, 50,30);
+  
+    // Color background?
   if(COLORS) {
     graphics_context_set_fill_color(ctx, GColorBlack);
   } else {
@@ -90,13 +104,27 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   //Draw Other watch items
   //graphics_fill_circle(ctx, s_center, s_radius)
-  //graphics_context_set_stroke_color(ctx, GColorGreen);
-  //graphics_draw_circle(GContext * ctx, 30,30, 20);
   
+  //Set color of outside references
+ graphics_context_set_stroke_color(ctx, GColorGreen);
+ graphics_context_set_fill_color(ctx, GColorRed);
+  current_degrees = 0;
+do { //Draw outside references until they go all the way around the circle
+  //GRect point1 = grect_centered_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees), GSize(10,10));
+  GPoint point1 = gpoint_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees));
+ //graphics_draw_rect(ctx, point1); 
+ graphics_fill_circle(ctx, point1, 3);
+  
+  
+  //Add degrees for next iteration
+  current_degrees = current_degrees + degrees_between;  
+  
+} while(current_degrees < 360);
+ 
   
 
   // Draw outline
-  graphics_draw_circle(ctx, s_center, s_radius);
+  //graphics_draw_circle(ctx, s_center, s_radius);
   
   // Don't use current time while animating
   Time mode_time = (s_animating) ? s_anim_time : s_last_time;
@@ -136,6 +164,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
 static void window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect window_bounds = layer_get_bounds(window_layer);
+  
 
   s_center = grect_center_point(&window_bounds);
 
