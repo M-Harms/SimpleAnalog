@@ -77,6 +77,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   int outside_buffer = 5; //Distance between reference and edge
   int degrees_between = 30; //Degrees between reference on the outside of the watch
   int current_degrees; //Degrees that is currently being drawn
+  int current_number;
  
     
   GRect bounds = layer_get_bounds(layer);  
@@ -108,18 +109,33 @@ static void update_proc(Layer *layer, GContext *ctx) {
   //Set color of outside references
  graphics_context_set_stroke_color(ctx, GColorGreen);
  graphics_context_set_fill_color(ctx, GColorRed);
-  current_degrees = 0;
+  
+  //Set up do loop
+  current_degrees = 30;
+  current_number = 1;
+  
 do { //Draw outside references until they go all the way around the circle
   //GRect point1 = grect_centered_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees), GSize(10,10));
-  GPoint point1 = gpoint_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees));
+  
+  //Draw Numbers
+  char watch_number [3];
+  snprintf(watch_number, 3,"%d", current_number);  
+  GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
+  GRect text_bounds = grect_centered_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees), GSize(20,20));
+  graphics_context_set_text_color(ctx, GColorRed);
+  graphics_draw_text(ctx, watch_number, font, text_bounds, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  
+  
+  //Draw Circles
+  //GPoint point1 = gpoint_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees));
  //graphics_draw_rect(ctx, point1); 
- graphics_fill_circle(ctx, point1, 3);
+ //graphics_fill_circle(ctx, point1, 3);
   
   
   //Add degrees for next iteration
   current_degrees = current_degrees + degrees_between;  
-  
-} while(current_degrees < 360);
+  current_number = current_number + 1;
+} while(current_degrees < 390);
  
   
 
