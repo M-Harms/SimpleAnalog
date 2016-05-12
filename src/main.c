@@ -90,8 +90,8 @@ static void update_proc(Layer *layer, GContext *ctx) {
 
   //Draw Other watch items
   //graphics_fill_circle(ctx, s_center, s_radius)
-  graphics_context_set_stroke_color(ctx, GColorGreen);
-  graphics_draw_circle(ctx, 30,30, 20);
+  //graphics_context_set_stroke_color(ctx, GColorGreen);
+  //graphics_draw_circle(GContext * ctx, 30,30, 20);
   
   
 
