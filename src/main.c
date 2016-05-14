@@ -3,12 +3,14 @@
 #define COLORS       PBL_IF_COLOR_ELSE(true, false)
 #define ANTIALIASING true
 
-#define HAND_MARGIN  10
+#define HOUR_HAND_MARGIN  13
+#define MIN_HAND_MARGIN  10
+
 #define FINAL_RADIUS 65
 #define MIN_HAND_GREATER_LENGTH 10
 
-#define ANIMATION_DURATION 500
-#define ANIMATION_DELAY    600
+#define ANIMATION_DURATION 0
+#define ANIMATION_DELAY    0
 
 typedef struct {
   int hours;
@@ -16,12 +18,29 @@ typedef struct {
 } Time;
 
 static Window *s_main_window;
+static TextLayer *s_time_layer, *s_UTC_layer, *s_date_layer;
 static Layer *s_canvas_layer;
 
 static GPoint s_center;
 static Time s_last_time, s_anim_time;
 static int s_radius = 0, s_anim_hours_60 = 0, s_color_channels[3];
 static bool s_animating = false;
+
+static void bluetooth_callback(bool connected) {
+  // Make text red on disconnect
+  text_layer_set_text_color(s_date_layer, GColorWhite);
+text_layer_set_text_color(s_UTC_layer, GColorWhite);
+
+  
+  if(!connected) {
+    vibes_double_pulse();
+    text_layer_set_text_color(s_date_layer, GColorRed);
+    text_layer_set_text_color(s_UTC_layer, GColorRed);
+    
+  }
+}
+
+
 
 /*************************** AnimationImplementation **************************/
 
@@ -107,7 +126,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   
   //Set color of outside references
  graphics_context_set_stroke_color(ctx, GColorGreen);
- graphics_context_set_fill_color(ctx, GColorRed);
+ graphics_context_set_fill_color(ctx, GColorWhite);
   
   //Set up do loop
   current_degrees = 30;
@@ -132,7 +151,7 @@ do { //Draw outside references until they go all the way around the circle
       snprintf(watch_number, 3,"%d", current_number);  
       GFont font = fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD);
       GRect text_bounds = grect_centered_from_polar(outside_circle,GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(current_degrees), GSize(20,20));
-      graphics_context_set_text_color(ctx, GColorRed);
+      graphics_context_set_text_color(ctx, GColorWhite);
       graphics_draw_text(ctx, watch_number, font, text_bounds, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
       next_number = next_number + 30;
       current_number = current_number + 1;    
@@ -151,6 +170,63 @@ else {
   
 } while(current_degrees < 390);
  
+ GColor TextColor;
+   TextColor = GColorWhite;
+  
+//Add other time elements
+  // Improve the layout to be more like a watchface for local time
+  text_layer_set_background_color(s_time_layer, GColorClear);
+  text_layer_set_text_color(s_time_layer, TextColor);
+  text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
+
+  // Improve the layout to be more like a watchface for UTC time
+  text_layer_set_background_color(s_UTC_layer, GColorClear);
+  //text_layer_set_text_color(s_UTC_layer, TextColor);
+  text_layer_set_font(s_UTC_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text_alignment(s_UTC_layer, GTextAlignmentCenter);
+  
+  // Create date TextLayer
+
+//text_layer_set_text_color(s_date_layer, TextColor);
+text_layer_set_background_color(s_date_layer, GColorClear);
+text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
+text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  
+  
+  //Draw the other time functions
+  // Get a tm structure
+  time_t temp = time(NULL); 
+  struct tm *tick_time = localtime(&temp);
+  struct tm *tick_timeUTC = gmtime(&temp);
+  
+
+  // Write the current hours and minutes into a buffer
+  static char s_buffer[8];
+  strftime(s_buffer, sizeof(s_buffer), clock_is_24h_style() ?
+                                          "%H:%M" : "%I:%M", tick_time);
+
+
+//Do the same for UTC Time
+  static char s_bufferUTC[9];
+  strftime(s_bufferUTC, sizeof(s_bufferUTC),"%H:%M", tick_timeUTC);
+  
+//Get the date
+  static char date_buffer[16];
+strftime(date_buffer, sizeof(date_buffer), "%a, %b %d", tick_time);
+
+  
+  // Display this time on the TextLayer
+  text_layer_set_text(s_time_layer, s_buffer);
+ 
+  // Add the UTC label
+  static char UTCTimeLabel[13] = "UTC: ";
+   UTCTimeLabel[5]= '\0';
+  strcat(UTCTimeLabel, s_bufferUTC);
+ text_layer_set_text(s_UTC_layer, UTCTimeLabel);
+  
+  //Write the date
+  text_layer_set_text(s_date_layer, date_buffer);
   
 
   // Draw outline
@@ -172,20 +248,20 @@ else {
 
   // Plot hands
   GPoint minute_hand = (GPoint) {
-    .x = (int16_t)(sin_lookup(TRIG_MAX_ANGLE * mode_time.minutes / 60) * (int32_t)(s_radius - HAND_MARGIN) / TRIG_MAX_RATIO) + s_center.x,
-    .y = (int16_t)(-cos_lookup(TRIG_MAX_ANGLE * mode_time.minutes / 60) * (int32_t)(s_radius - HAND_MARGIN) / TRIG_MAX_RATIO) + s_center.y,
+    .x = (int16_t)(sin_lookup(TRIG_MAX_ANGLE * mode_time.minutes / 60) * (int32_t)(s_radius - MIN_HAND_MARGIN) / TRIG_MAX_RATIO) + s_center.x,
+    .y = (int16_t)(-cos_lookup(TRIG_MAX_ANGLE * mode_time.minutes / 60) * (int32_t)(s_radius - MIN_HAND_MARGIN) / TRIG_MAX_RATIO) + s_center.y,
   };
   GPoint hour_hand = (GPoint) {
-    .x = (int16_t)(sin_lookup(hour_angle) * (int32_t)(s_radius - (2 * HAND_MARGIN)) / TRIG_MAX_RATIO) + s_center.x,
-    .y = (int16_t)(-cos_lookup(hour_angle) * (int32_t)(s_radius - (2 * HAND_MARGIN)) / TRIG_MAX_RATIO) + s_center.y,
+    .x = (int16_t)(sin_lookup(hour_angle) * (int32_t)(s_radius - (2 * HOUR_HAND_MARGIN)) / TRIG_MAX_RATIO) + s_center.x,
+    .y = (int16_t)(-cos_lookup(hour_angle) * (int32_t)(s_radius - (2 * HOUR_HAND_MARGIN)) / TRIG_MAX_RATIO) + s_center.y,
   };
 
   // Draw hands with positive length only
-  if(s_radius > 2 * HAND_MARGIN) {
+  if(s_radius > 2 * HOUR_HAND_MARGIN) {
     graphics_context_set_stroke_color(ctx, GColorRed);
     graphics_draw_line(ctx, s_center, hour_hand);
   }
-  if(s_radius > HAND_MARGIN) {
+  if(s_radius > MIN_HAND_MARGIN) {
     graphics_context_set_stroke_color(ctx, GColorWhite);
     graphics_draw_line(ctx, s_center, minute_hand);
   }
@@ -199,8 +275,31 @@ static void window_load(Window *window) {
   s_center = grect_center_point(&window_bounds);
 
   s_canvas_layer = layer_create(window_bounds);
+  
   layer_set_update_proc(s_canvas_layer, update_proc);
   layer_add_child(window_layer, s_canvas_layer);
+  
+  //Create Text layers
+   // Get information about the Window
+
+
+   // Create the TextLayer with specific bounds for local Time
+  s_time_layer = text_layer_create(GRect(0, 40, window_bounds.size.w, 50));
+  
+    // Create the TextLayer with specific bounds for UTC Time
+  s_UTC_layer = text_layer_create(GRect(0, 108, window_bounds.size.w, 50));
+  
+  //Create the Date Layer
+  s_date_layer = text_layer_create(GRect(0, 90, window_bounds.size.w, 30));
+  
+  // Add it as a child layer to the Window's root layer
+  //layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_UTC_layer));
+  layer_add_child(window_get_root_layer(window), text_layer_get_layer(s_date_layer));
+  
+  //Update Bluetooth
+  bluetooth_callback(connection_service_peek_pebble_app_connection());
+  
 }
 
 static void window_unload(Window *window) {
@@ -252,6 +351,12 @@ static void init() {
     .update = hands_update
   };
   animate(2 * ANIMATION_DURATION, ANIMATION_DELAY, &hands_impl, true);
+  
+  //Register Bluetooth Service
+  connection_service_subscribe((ConnectionHandlers) {
+    .pebble_app_connection_handler = bluetooth_callback
+  });
+  
 }
 
 static void deinit() {
